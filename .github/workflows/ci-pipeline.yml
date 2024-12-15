@@ -1,47 +1,35 @@
-name: CI Pipeline for C# Application
+name: CI/CD Pipeline for Product Service
 
 on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
 jobs:
-  build-and-publish:
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Клонирование репозитория
+      # Шаг 1: Клонирование репозитория
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Установка .NET SDK (для сборки)
-      - name: Set up .NET SDK
-        uses: actions/setup-dotnet@v3
-        with:
-          dotnet-version: '7.0.x' # Укажите версию .NET SDK
+      # Шаг 2: Настройка Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
 
-      # 3. Сборка проекта (проверка, что всё компилируется)
-      - name: Restore dependencies and build project
-        run: |
-          dotnet restore
-          dotnet build --configuration Release
-
-      # 4. Сборка Docker-образа
-      - name: Build Docker image
-        run: |
-          docker build -t your-dockerhub-username/product-service-csharp:latest .
-
-      # 5. Логин в Docker Hub
-      - name: Log in to Docker Hub
+      # Шаг 3: Аутентификация в Docker Hub
+      - name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
-      # 6. Публикация Docker-образа в Docker Hub
-      - name: Push Docker image to Docker Hub
-        run: |
-          docker push your-dockerhub-username/product-service-csharp:latest
+      # Шаг 4: Сборка и публикация Docker-образа
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v4
+        with:
+          context: .                       # Путь к Dockerfile
+          push: true                       # Пушим образ в Docker Hub
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/product-service:latest
+
